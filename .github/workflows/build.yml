@@ -1,0 +1,106 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build-linux-arm:
+    name: Linux ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: arm64-rk3326
+            arch: arm64
+            platform: rk3326
+            output: snes9x2010_libretro_linux_arm64.so
+
+          - name: arm32-rk3326
+            arch: arm32
+            platform: rk3326_32
+            output: snes9x2010_libretro_linux_arm32.so
+
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y make git bc sed zip
+          apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libc6-dev-armhf-cross
+          apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
+
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory /__w/snes9x2010/snes9x2010
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build
+        run: |
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            export CC=aarch64-linux-gnu-gcc
+            export CXX=aarch64-linux-gnu-g++
+          else
+            export CC=arm-linux-gnueabihf-gcc
+            export CXX=arm-linux-gnueabihf-g++
+          fi
+          make -f Makefile.libretro -j$(nproc) platform=${{ matrix.platform }} CC=$CC CXX=$CXX
+
+      - name: Rename output
+        run: mv snes9x2010_libretro.so ${{ matrix.output }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.name }}
+          path: ${{ matrix.output }}
+          if-no-files-found: error
+
+  release:
+    needs: [build-linux-arm]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get short SHA
+        id: sha
+        run: echo "short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List files
+        run: find artifacts -type f
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly-${{ steps.sha.outputs.short }}
+          name: "Nightly ${{ steps.sha.outputs.short }}"
+          body: |
+            ## Nightly Build
+
+            Commit: `${{ github.sha }}`
+
+            ### Downloads
+            - `snes9x2010_libretro_linux_arm64.so` - Linux ARM64 (RK3326)
+            - `snes9x2010_libretro_linux_arm32.so` - Linux ARM32 (RK3326)
+          files: artifacts/**/*
+          make_latest: true

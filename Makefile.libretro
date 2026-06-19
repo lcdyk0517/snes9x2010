@@ -390,6 +390,28 @@ TARGET := $(TARGET_NAME)_libretro.so
 	USE_DYNAREC = 1
 #########################################
 
+# RK3326 (64-bit)
+else ifeq ($(platform), rk3326)
+	TARGET := $(TARGET_NAME)_libretro.so
+	fpic := -fPIC
+	SHARED := -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
+	CFLAGS += -DARM
+	CFLAGS += -march=armv8-a+crc -mcpu=cortex-a35 -mtune=cortex-a35 -funsafe-math-optimizations
+	CFLAGS += -fomit-frame-pointer -ffast-math
+	CFLAGS += -static-libgcc -static-libstdc++
+	HAVE_NEON = 1
+
+# RK3326 (32-bit)
+else ifeq ($(platform), rk3326_32)
+	TARGET := $(TARGET_NAME)_libretro.so
+	fpic := -fPIC
+	SHARED := -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
+	CFLAGS += -DARM -D__arm__
+	CFLAGS += -marm -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard -funsafe-math-optimizations
+	CFLAGS += -fomit-frame-pointer -ffast-math
+	CFLAGS += -static-libgcc -static-libstdc++
+	HAVE_NEON = 1
+
 # Xbox 360
 else ifeq ($(platform), xenon)
 	EXT=a

@@ -395,7 +395,7 @@ else ifeq ($(platform), rk3326)
 	TARGET := $(TARGET_NAME)_libretro.so
 	fpic := -fPIC
 	SHARED := -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
-	CFLAGS += -DARM
+	CFLAGS += -DARM -D__ARM_NEON__
 	CFLAGS += -march=armv8-a+crc -mcpu=cortex-a35 -mtune=cortex-a35 -funsafe-math-optimizations
 	CFLAGS += -fomit-frame-pointer -ffast-math
 	CFLAGS += -static-libgcc -static-libstdc++
@@ -406,7 +406,7 @@ else ifeq ($(platform), rk3326_32)
 	TARGET := $(TARGET_NAME)_libretro.so
 	fpic := -fPIC
 	SHARED := -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
-	CFLAGS += -DARM -D__arm__
+	CFLAGS += -DARM -D__arm__ -D__ARM_NEON__
 	CFLAGS += -marm -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard -funsafe-math-optimizations
 	CFLAGS += -fomit-frame-pointer -ffast-math
 	CFLAGS += -static-libgcc -static-libstdc++
